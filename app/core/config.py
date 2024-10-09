@@ -1,11 +1,22 @@
+import os
 import secrets
+from typing import Literal
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import AnyHttpUrl, EmailStr, PostgresDsn, validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=f".env.{os.getenv('ENVIRONMENT', 'development')}",
+        env_ignore_empty=True,
+        extra="ignore",
+    )
+
+    ENVIRONMENT: Literal["local", "development", "staging", "production"] = "local"
+
+    PROJECT_NAME: str = "APP"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     # 60 minutes * 24 hours * 8 days = 8 days
@@ -47,9 +58,6 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
     USERS_OPEN_REGISTRATION: bool = False
-
-    class Config:
-        case_sensitive = True
 
 
 settings = Settings()

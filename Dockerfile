@@ -1,28 +1,46 @@
-FROM python:3.12-slim-bullseye
+# Stage 1: Build the dependencies
+FROM python:3.12-slim-bullseye AS build
 
-# Upgrade pip and install necessary dependencies for Poetry
 RUN pip install --upgrade pip
 
-# Set environment variables for Poetry
+ENV POETRY_HOME=/opt/poetry \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_CACHE_DIR=/tmp/poetry_cache \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    LOG_LEVEL=DEBUG \
+    ENVIRONMENT=local
+
+RUN pip install poetry==1.8.3
+
+WORKDIR /app/
+
+COPY ./pyproject.toml ./poetry.lock* /app/
+RUN touch README.md
+
+RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
+
+# Stage 2: Create the production image
+FROM python:3.12-slim-bullseye
+
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_HOME=/opt/poetry \
     POETRY_VIRTUALENVS_CREATE=false \
     POETRY_CACHE_DIR=/tmp/poetry_cache \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    LOG_LEVEL=ERROR \
+    ENVIRONMENT=production
 
-# Install poetry
 RUN pip install poetry==1.8.3
 
 WORKDIR /app/
 
-# Copy pyproject.toml and poetry.lock (if exists) to the working directory
-COPY ./pyproject.toml ./poetry.lock* /app/
-RUN touch README.md
+COPY --from=build /app /app
 
-# Install project dependencies without dev dependencies
-RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
+RUN poetry install --without dev --no-root && rm -rf /tmp/poetry_cache
 
-# Copy the rest of the application code
 COPY ./app /app
 ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
