@@ -9,7 +9,7 @@ ENV POETRY_HOME=/opt/poetry \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     LOG_LEVEL=DEBUG \
-    ENVIRONMENT=local
+    ENVIRONMENT=development
 
 RUN pip install poetry==1.8.3
 
